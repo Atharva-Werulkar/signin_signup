@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:signin_signup/auth/database_services.dart';
 
 class FirebaseAuthHelper {
+  //sign up using email and password
   static Future<User?> registerUsingEmailPassword({
     required String name,
     required String email,
@@ -15,24 +17,22 @@ class FirebaseAuthHelper {
         password: password,
       );
 
-      user = userCredential.user;
-      await user!.updateDisplayName(name);
-      await user.reload();
+      DatabaseServices.addUserToDatabase(
+        id: userCredential.user!.uid,
+        image: '',
+        about: '',
+        name: name,
+        email: email,
+      );
+
       user = auth.currentUser;
     } on FirebaseAuthException catch (e) {
-      // add swtich case
-      if (e.code == 'weak-password') {
-        print('The password provided is too weak.');
-      } else if (e.code == 'email-already-in-use') {
-        print('The account already exists for that email.');
-      }
-    } catch (e) {
-      print(e);
+      rethrow;
     }
-
     return user;
   }
 
+  //sign in using email and password
   static Future<User?> signInUsingEmailPassword({
     required String email,
     required String password,
@@ -51,5 +51,9 @@ class FirebaseAuthHelper {
     }
 
     return user;
+  }
+
+  static Future<void> signOut() async {
+    await FirebaseAuth.instance.signOut();
   }
 }

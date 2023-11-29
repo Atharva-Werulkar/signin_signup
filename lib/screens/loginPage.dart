@@ -3,10 +3,10 @@ import 'dart:developer';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:signin_signup/firebase_auth.dart';
-import 'package:signin_signup/homeScreen.dart';
-import 'package:signin_signup/registerPage.dart';
-import 'package:signin_signup/validator.dart';
+import 'package:signin_signup/auth/firebase_auth_helper.dart';
+import 'package:signin_signup/screens/ProfileScreen.dart';
+import 'package:signin_signup/screens/registerPage.dart';
+import 'package:signin_signup/auth/validator.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -29,42 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<FirebaseApp> _initializeFirebase() async {
     FirebaseApp firebaseApp = await Firebase.initializeApp();
 
-    //TODO: USE AUTH STATE CHANGE TO CHECK IF USER IS LOGGED IN
-
-    User? user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(
-            user: user,
-          ),
-        ),
-      );
-    }
-
     return firebaseApp;
-  }
-
-  String _getErrorMessage(String e) {
-    String errorMessage = '';
-
-    switch (e) {
-      case 'user-not-found':
-        errorMessage = 'No user found with this email.';
-        break;
-      case 'invalid-email':
-        errorMessage = 'Invalid email address.';
-        break;
-      case 'user-disabled':
-        errorMessage = 'This user account has been disabled.';
-        break;
-      case 'wrong-password':
-        errorMessage = 'Invalid password.';
-        break;
-    }
-
-    return errorMessage;
   }
 
   @override
@@ -76,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Login'),
+          title: const Text('Login'),
           centerTitle: true,
         ),
         body: FutureBuilder(
@@ -101,13 +66,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(15.0),
                           ),
                           hintText: "Email",
-                          errorBorder: UnderlineInputBorder(
-                            borderRadius: BorderRadius.circular(6.0),
-                            borderSide: BorderSide(),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15.0),
                           ),
                         ),
                       ),
-                      SizedBox(height: 8.0),
+                      const SizedBox(height: 8.0),
                       TextFormField(
                         controller: _passwordTextController,
                         focusNode: _focusPassword,
@@ -120,15 +84,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(15.0),
                           ),
                           hintText: "Password",
-                          errorBorder: UnderlineInputBorder(
-                            borderRadius: BorderRadius.circular(6.0),
-                            borderSide: BorderSide(),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15.0),
                           ),
                         ),
                       ),
-                      SizedBox(height: 24.0),
+                      const SizedBox(height: 24.0),
                       _isProcessing
-                          ? CircularProgressIndicator()
+                          ? const CircularProgressIndicator()
                           : Column(
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -145,8 +108,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     _focusEmail.unfocus();
                                     _focusPassword.unfocus();
 
-                                    //TODO add try-catch(error handling)
-
                                     if (_formKey.currentState!.validate()) {
                                       try {
                                         setState(() {
@@ -161,38 +122,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                               _passwordTextController.text,
                                         );
 
-                                        setState(() {
-                                          _isProcessing = false;
-                                        });
-
-                                        if (user != null) {
-                                          Navigator.of(context).pushReplacement(
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  HomeScreen(user: user),
-                                            ),
-                                          );
-                                        }
+                                        // setState(() {
+                                        //   _isProcessing = false;
+                                        // });
                                       } on FirebaseAuthException catch (e) {
-                                        // Display an error message
-                                        print('Test ');
-
-                                        log(_getErrorMessage(e.code));
+                                        // Display an alert dialog containing the humanize error message
+                                        _showErrorDialog(e);
+                                        print('Test ${e.code}');
                                         setState(() {
                                           _isProcessing = false;
-                                          _errorMessage =
-                                              _getErrorMessage(e.code);
-
-                                          _showErrorDialog(e.message);
                                         });
                                       }
                                     }
                                   },
-                                  child: Text(
+                                  child: const Text(
                                     'Sign In',
                                   ),
                                 ),
-                                SizedBox(width: 24.0),
+                                const SizedBox(width: 24.0),
                                 ElevatedButton(
                                   onPressed: () {
                                     Navigator.of(context).push(
@@ -201,13 +148,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     );
                                   },
-                                  child: Text(
+                                  child: const Text(
                                     'SignUp',
                                   ),
                                 ),
                               ],
                             ),
-                      SizedBox(height: 24.0),
+                      const SizedBox(height: 24.0),
                     ],
                   ),
                 ),
@@ -223,9 +170,41 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _showErrorDialog(String? errorMessage) {
-    SnackBar(
-      content: Text(errorMessage.toString()),
+  //code of _showErrorDialog
+  void _showErrorDialog(FirebaseAuthException e) {
+    String errorMessage = '';
+    switch (e.code) {
+      // case error for registration
+      case 'invalid-email':
+        errorMessage = 'The email address is not valid.';
+        break;
+      case 'user-disabled':
+        errorMessage = 'The user account has been disabled.';
+        break;
+      case 'user-not-found':
+        errorMessage = 'The user account has not been found.';
+        break;
+      case 'wrong-password':
+        errorMessage = 'Invalid password.';
+        break;
+      case 'email-already-in-use':
+        errorMessage = 'An account already exists with that email address.';
+        break;
+      default:
+        errorMessage = 'An undefined Error happened.';
+    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(errorMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 }

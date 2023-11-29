@@ -3,9 +3,9 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:signin_signup/firebase_auth.dart';
-import 'package:signin_signup/homeScreen.dart';
-import 'package:signin_signup/validator.dart';
+import 'package:signin_signup/auth/firebase_auth_helper.dart';
+import 'package:signin_signup/screens/ProfileScreen.dart';
+import 'package:signin_signup/auth/validator.dart';
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -35,7 +35,7 @@ class _RegisterPageState extends State<RegisterPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Create Account'),
+          title: const Text('Create Account'),
           centerTitle: true,
         ),
         body: Padding(
@@ -59,13 +59,11 @@ class _RegisterPageState extends State<RegisterPage> {
                             borderRadius: BorderRadius.circular(15.0),
                           ),
                           hintText: "Name",
-                          errorBorder: UnderlineInputBorder(
-                            borderRadius: BorderRadius.circular(6.0),
-                            borderSide: BorderSide(),
-                          ),
+                          errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15.0)),
                         ),
                       ),
-                      SizedBox(height: 12.0),
+                      const SizedBox(height: 12.0),
                       TextFormField(
                         controller: _emailTextController,
                         focusNode: _focusEmail,
@@ -77,13 +75,12 @@ class _RegisterPageState extends State<RegisterPage> {
                             borderRadius: BorderRadius.circular(15.0),
                           ),
                           hintText: "Email",
-                          errorBorder: UnderlineInputBorder(
-                            borderRadius: BorderRadius.circular(6.0),
-                            borderSide: BorderSide(),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15.0),
                           ),
                         ),
                       ),
-                      SizedBox(height: 12.0),
+                      const SizedBox(height: 12.0),
                       TextFormField(
                         controller: _passwordTextController,
                         focusNode: _focusPassword,
@@ -96,15 +93,14 @@ class _RegisterPageState extends State<RegisterPage> {
                             borderRadius: BorderRadius.circular(15.0),
                           ),
                           hintText: "Password",
-                          errorBorder: UnderlineInputBorder(
-                            borderRadius: BorderRadius.circular(6.0),
-                            borderSide: BorderSide(),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15.0),
                           ),
                         ),
                       ),
-                      SizedBox(height: 32.0),
+                      const SizedBox(height: 32.0),
                       _isProcessing
-                          ? CircularProgressIndicator()
+                          ? const CircularProgressIndicator()
                           : Row(
                               children: [
                                 Expanded(
@@ -130,17 +126,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                           });
 
                                           if (user != null) {
-                                            Navigator.of(context)
-                                                .pushAndRemoveUntil(
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    HomeScreen(user: user),
-                                              ),
-                                              ModalRoute.withName('/'),
-                                            );
+                                            Navigator.pop(context);
                                           }
                                         } on FirebaseAuthException catch (e) {
                                           _showErrorDialog(e);
+                                          setState(() {
+                                            _isProcessing = false;
+                                          });
                                           log(e.message.toString());
                                         }
                                       } else {
@@ -149,7 +141,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                         });
                                       }
                                     },
-                                    child: Text(
+                                    child: const Text(
                                       'Sign up',
                                     ),
                                   ),
@@ -168,22 +160,42 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _showErrorDialog(FirebaseAuthException e) {
-    showModalBottomSheet(
+    String errorMessage = '';
+    switch (e.code) {
+      case 'email-already-in-use':
+        errorMessage = 'An account already exists with that email address.';
+        break;
+      case 'invalid-email':
+        errorMessage = 'The email address is not valid.';
+        break;
+      case 'weak-password':
+        errorMessage = 'The password is too weak.';
+        break;
+      // General authentication errors
+      case 'user-disabled':
+        errorMessage = 'The user account has been disabled.';
+        break;
+      case 'user-not-found':
+        errorMessage = 'The user account has not been found.';
+        break;
+      case 'wrong-password':
+        errorMessage = 'The password is invalid.';
+        break;
+      default:
+        errorMessage = 'An undefined Error happened.';
+    }
+    showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Error'),
-          content: Text(e.message.toString()),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(errorMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 }
